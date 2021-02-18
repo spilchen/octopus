@@ -6,3 +6,4 @@ image:
   registry: eu.gcr.io/kyma-project/incubator
   dir: develop/
   version: dc5dc284
+  pullPolicy: Always

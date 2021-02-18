@@ -82,19 +82,18 @@ func (s *Definition) findByLabelExpressions(ctx context.Context, suite v1alpha1.
 }
 
 func (s *Definition) unique(slices ...[]v1alpha1.TestDefinition) []v1alpha1.TestDefinition {
-	unique := make(map[types.UID]v1alpha1.TestDefinition)
+	tests := make([]v1alpha1.TestDefinition, 0)
+	unique := make(map[types.UID]bool)
 	for _, slice := range slices {
 		for _, td := range slice {
-			unique[td.UID] = td
+			if _, ok := unique[td.UID]; !ok {
+				unique[td.UID] = true
+				tests = append(tests, td)
+			}
 		}
 	}
 
-	result := make([]v1alpha1.TestDefinition, 0, len(unique))
-	for _, td := range unique {
-		result = append(result, td)
-	}
-
-	return result
+	return tests
 }
 
 func (s *Definition) findAll(ctx context.Context, suite v1alpha1.ClusterTestSuite) ([]v1alpha1.TestDefinition, error) {

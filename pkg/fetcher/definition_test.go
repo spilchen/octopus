@@ -162,6 +162,10 @@ func TestFindMatching(t *testing.T) {
 	t.Run("return tests returns unique result across all selectors", func(t *testing.T) {
 		// GIVEN
 		testA := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
 			ObjectMeta: v1.ObjectMeta{
 				UID:       "test-uid-a",
 				Name:      "test-a",
@@ -248,6 +252,158 @@ func TestFindMatching(t *testing.T) {
 
 	})
 
+	t.Run("return tests in test suite order when selecting by name", func(t *testing.T) {
+		// GIVEN
+		testA := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-a",
+				Name:      "test-a",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		testB := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-b",
+				Name:      "test-b",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		testC := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-c",
+				Name:      "test-c",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		fakeCli := fake.NewFakeClientWithScheme(sch,
+			testA, testB, testC,
+		)
+		service := fetcher.NewForDefinition(fakeCli)
+		// WHEN
+		out, err := service.FindMatching(v1alpha1.ClusterTestSuite{
+			Spec: v1alpha1.TestSuiteSpec{
+				Selectors: v1alpha1.TestsSelector{
+					MatchNames: []v1alpha1.TestDefReference{
+						{
+							Name:      "test-c",
+							Namespace: "ns",
+						},
+						{
+							Name:      "test-b",
+							Namespace: "ns",
+						},
+						{
+							Name:      "test-a",
+							Namespace: "ns",
+						},
+					},
+				},
+			},
+		})
+		// THEN
+		require.NoError(t, err)
+		assert.Len(t, out, 3)
+		expectedOrder := []v1alpha1.TestDefinition{*testC, *testB, *testA}
+		assert.ElementsMatch(t, out, expectedOrder)
+	})
+
+	t.Run("return tests in test suite order when selecting by name and selector", func(t *testing.T) {
+		// GIVEN
+		testA := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-a",
+				Name:      "test-a",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		testB := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-b",
+				Name:      "test-b",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		testC := &v1alpha1.TestDefinition{
+			TypeMeta: v1.TypeMeta{
+				Kind:       "TestDefinition",
+				APIVersion: "testing.kyma-project.io/v1alpha1",
+			},
+			ObjectMeta: v1.ObjectMeta{
+				UID:       "test-uid-c",
+				Name:      "test-c",
+				Namespace: "ns",
+				Labels: map[string]string{
+					"test": "true",
+				},
+			},
+		}
+
+		fakeCli := fake.NewFakeClientWithScheme(sch,
+			testA, testB, testC,
+		)
+		service := fetcher.NewForDefinition(fakeCli)
+		// WHEN
+		out, err := service.FindMatching(v1alpha1.ClusterTestSuite{
+			Spec: v1alpha1.TestSuiteSpec{
+				Selectors: v1alpha1.TestsSelector{
+					MatchNames: []v1alpha1.TestDefReference{
+						{
+							Name:      "test-b",
+							Namespace: "ns",
+						},
+					},
+					MatchLabelExpressions: []string{
+						"test=true",
+					},
+				},
+			},
+		})
+		// THEN
+		require.NoError(t, err)
+		assert.Len(t, out, 3)
+		expectedOrder := []v1alpha1.TestDefinition{*testB, *testA, *testC}
+		assert.ElementsMatch(t, out, expectedOrder)
+	})
 }
 
 type mockErrReader struct {

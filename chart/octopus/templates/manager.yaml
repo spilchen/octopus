@@ -48,7 +48,7 @@ spec:
       - command:
         - /manager
         image: {{.Values.image.registry}}/{{.Values.image.dir}}octopus:{{.Values.image.version}}
-        imagePullPolicy: Always
+        imagePullPolicy: {{.Values.image.pullPolicy}}
         name: manager
         env:
           - name: POD_NAMESPACE
